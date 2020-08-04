@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 
 namespace GradeBook
 {
@@ -7,22 +6,60 @@ namespace GradeBook
     {
         static void Main(string[] args)
         {
-            var book = new Book("Henrique's Grade Book");
-            book.AddGrade(89.1);
-            book.AddGrade(90.5);
-            book.AddGrade(77.5);
+            IBook book = new DiskBook("Henrique's Grade Book");
+            book.GradeAdded += OnGradeAdded;
+            book.GradeAdded += OnGradeAdded;
+            book.GradeAdded -= OnGradeAdded;
             
-            var result = book.GetStatistics();
+            EnterGrades(book);
 
-            Console.WriteLine($"The lowest grade is {result.Low}");
-            Console.WriteLine($"The highest grade is {result.High}");
-            Console.WriteLine($"The average grade is {result.Average:N1}"); // N (number), 1 (digit) of precision
+            var stats = book.GetStatistics();
+
+            Console.WriteLine($"Fore the book named {book.Name}");
+            Console.WriteLine($"The lowest grade is {stats.Low}");
+            Console.WriteLine($"The highest grade is {stats.High}");
+            Console.WriteLine($"The average grade is {stats.Average:N1}"); // N (number), 1 (digit) of precision
+            Console.WriteLine($"The letter grade is {stats.Letter}");
 
             // var numbers = new[] { 12.5, 1.4 }; // Initialization
 
-            
+        }
 
-            
+        private static void EnterGrades(IBook book)
+        {
+            while (true)
+            {
+                Console.WriteLine("Enter a grade or 'q' to quit");
+                var input = Console.ReadLine();
+
+                if (input == "q")
+                {
+                    break;
+                }
+
+                try
+                {
+                    var grade = double.Parse(input);
+                    book.AddGrade(grade);
+                }
+                catch (ArgumentException ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+                catch (FormatException ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+                finally
+                {
+                    Console.WriteLine("**");
+                }
+            }
+        }
+
+        static void OnGradeAdded(object sender, EventArgs e)
+        {
+            Console.WriteLine("A grade was added.");
         }
     }
 }

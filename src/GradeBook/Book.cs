@@ -1,36 +1,158 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 
 namespace GradeBook
 {
-    public class Book
+    public delegate void GradeAddedDelegate(object sender, EventArgs args);
+
+    public class NamedObject
+    {
+        public NamedObject(string name)
+        {
+            Name = name;
+        }
+
+        public string Name
+        {
+            get;
+            set;
+        }
+    }
+
+    public interface IBook
+    {
+        void AddGrade(double grade);
+        Statistics GetStatistics();
+        string Name { get; } // Property
+        event GradeAddedDelegate GradeAdded;
+    }
+
+    public abstract class Book : NamedObject, IBook
+    {
+        public Book(string name) : base(name)
+        {
+        }
+
+        public abstract event GradeAddedDelegate GradeAdded;
+
+        public abstract void AddGrade(double grade);
+
+        public abstract Statistics GetStatistics();
+    }
+
+    public class DiskBook : Book
+    {
+        public DiskBook(string name) : base(name)
+        {
+        }
+
+        public override event GradeAddedDelegate GradeAdded;
+
+        public override void AddGrade(double grade)
+        {
+            using (var writer = File.AppendText($"{Name}.txt"))
+            {
+                writer.WriteLine(grade);
+
+                if (GradeAdded != null)
+                {
+                    GradeAdded(this, new EventArgs());
+                }
+            }
+        }
+
+        public override Statistics GetStatistics()
+        {
+            var result = new Statistics();
+
+            using (var reader = File.OpenText($"{Name}.txt"))
+            {
+                var line = reader.ReadLine();
+
+                while (line != null)
+                {
+                    var number = double.Parse(line);
+
+                    result.Add(number);
+
+                    line = reader.ReadLine();
+                }
+            }
+
+            return result;
+        }
+    }
+
+    public class InMemoryBook : Book, IBook
     {
         private string name;
         private List<double> grades;
 
-        public Book(string name)
+        public const string CATEGORY = "Science";
+
+        public InMemoryBook(string name) : base(name)
         {
-            this.name = name;
-            this.grades = new List<double>();
+            Name = name;
+            // grades = new List<double>();
         }
 
-        public void AddGrade(double grade) => grades.Add(grade);
+        // public string Name
+        // {
+        //     get; private set;
+        // }
 
-        public Statistics GetStatistics()
+        public override void AddGrade(double grade)
+        {
+            if (grade >= 0 && grade <= 100)
+            {
+                grades.Add(grade);
+
+                if (GradeAdded != null)
+                {
+                    GradeAdded(this, new EventArgs());
+                }
+            }
+            else
+            {
+                throw new ArgumentException($"Invalid {nameof(grade)}");
+            }
+        }
+
+        public override event GradeAddedDelegate GradeAdded; // Field.
+
+        public void AddGrade(char letter)
+        {
+            switch (letter)
+            {
+                case 'A':
+                    AddGrade(90);
+
+                    break;
+                case 'B':
+                    AddGrade(80);
+
+                    break;
+                case 'C':
+                    AddGrade(80);
+
+                    break;
+
+                default:
+                    AddGrade(0);
+
+                    break;
+            }
+        }
+
+        public override Statistics GetStatistics()
         {
             var result = new Statistics();
-            result.Average = 0.0;
-            result.High = double.MinValue;
-            result.Low = double.MaxValue;
 
             foreach (var grade in grades)
             {
-                result.Average += grade;
-                result.Low = Math.Min(grade, result.Low);
-                result.High = Math.Max(grade, result.High);
+                result.Add(grade);
             }
-
-            result.Average /= grades.Count;
 
             return result;
         }
